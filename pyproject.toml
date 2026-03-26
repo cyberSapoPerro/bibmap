@@ -1,0 +1,15 @@
+[project]
+name = "bibmap"
+version = "0.1.0"
+description = "Visiaulize bibliometric maps"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "habanero"
+]
+
+[project.scripts]
+bibmap = "bibmap.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
