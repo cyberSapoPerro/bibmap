@@ -1,9 +1,12 @@
 import json
 import re
 import sqlite3
+import tempfile
+import webbrowser
 
 import requests
 from tqdm import tqdm
+from pyvis.network import Network
 
 TEST_DOI = "10.1103/physreve.87.032113"
 
@@ -17,6 +20,13 @@ def set_db_connection():
 def save_citations_json(citations, path="cites.json"):
     with open(path, "w", encoding="utf-8") as f:
         json.dump(citations, f, indent=2, ensure_ascii=False)
+
+
+def fetch_jsons(doi):
+    norm_doi = normalize_doi(doi)
+    norm_doi = norm_doi.replace('/', '_')
+    save_citations_json(crossref_api(norm_doi), path=f"crossref--{norm_doi}.json")
+    save_citations_json(opencitations_api(norm_doi), path=f"opencitations--{norm_doi}.json")
 
 
 def opencitations_api(doi):
@@ -41,13 +51,6 @@ def normalize_doi(doi: str) -> str:
     doi = re.sub(r'^https?://(dx\.)?doi\.org/', '', doi)
     doi = re.sub(r'^doi:\s*', '', doi)
     return doi
-
-
-def fetch_jsons(doi):
-    norm_doi = normalize_doi(doi)
-    norm_doi = norm_doi.replace('/', '_')
-    save_citations_json(crossref_api(norm_doi), path=f"crossref--{norm_doi}.json")
-    save_citations_json(opencitations_api(norm_doi), path=f"opencitations--{norm_doi}.json")
 
 
 def fetch_data(doi):
@@ -215,12 +218,72 @@ def populate_db(conn):
     for doi in tqdm(dois):
         ingest_doi(conn, doi)
 
+
+def get_nodes(conn):
+    cur = conn.execute(
+        """
+        select doi from papers limit 500;
+        """
+    )
+    dois = [row[0] for row in cur.fetchall()]
+    return dois
+
+
+def get_edges(conn, nodes):
+    placeholders = ",".join(["?"] * len(nodes))
+    query = f"""
+        SELECT * FROM citations
+        WHERE citing_doi IN ({placeholders})
+           OR cited_doi IN ({placeholders});
+    """
+    cur = conn.execute(query, nodes + nodes)
+    return cur.fetchall()
+
+
+def get_nodes_from_edges(edges):
+    nodes = set()
+    for citing, cited in edges:
+        nodes.add(citing)
+        nodes.add(cited)
+    return list(nodes)       
+
+
+def sanitize_edges(nodes, edges):
+    citations = []
+    for e in tqdm(edges):
+        citing_doi = e[0]
+        cited_doi = e[1]
+        if (citing_doi in nodes):
+            citations.append(e)
+    return citations
+
+
+def make_graph(nodes, edges):
+    net = Network(
+        height="100vh",
+        width="100%",
+        directed=True,
+        cdn_resources="remote"
+    )
+    print("Adding nodes")
+    for n in tqdm(nodes):
+        net.add_node(n)
+    print("Adding edges")
+    for e in tqdm(edges):
+        net.add_edge(e[0], e[1])
+    with tempfile.NamedTemporaryFile(suffix=".html") as f:
+        html_path = f.name
+    net.write_html(html_path)
+    webbrowser.open(f"file://{html_path}")
     
 
 def main():
     conn = set_db_connection()
-    # ingest_doi(conn, TEST_DOI)
-    populate_db(conn)
+    nodes = get_nodes(conn)
+    edges = get_edges(conn, nodes)
+    final_nodes = get_nodes_from_edges(edges)
+    
+    make_graph(final_nodes, edges)
 
 
 if __name__ == "__main__":
