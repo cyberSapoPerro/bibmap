@@ -1,28 +1,26 @@
 from datetime import datetime
 
+from bibmap.api.connections import fetch_crossref, fetch_opencitations
 from bibmap.utils import normalize_doi
 
 
-def extract_date(obj):
-    if not obj:
-        return None
-    parts = obj.get("date-parts")
-    y, m, d = (parts [0] + [1, 1, 1])[:3]
-    return datetime(y, m, d).date()
-
-
-def transform_data(data:  dict, root_doi: str) -> tuple:
+def transform_crossref_data(doi: str) -> tuple:
     papers = []
     citations = []
     authors = []
     paper_authors = []
 
-    crossref = data.get("crossref", {})
-    root_doi = normalize_doi(root_doi)
-    opencitations = data.get("opencitations", {})
+    crossref = fetch_crossref(doi)
+
+    def extract_date(obj):
+        if not obj:
+            return None
+        parts = obj.get("date-parts")
+        y, m, d = (parts [0] + [1, 1, 1])[:3]
+        return datetime(y, m, d).date()
 
     papers.append({
-        "doi": root_doi,
+        "doi": doi,
         "title": crossref.get("title", [""])[0],
         "reference_count": crossref.get("reference-count"),
         "publisher": crossref.get("publisher"),
@@ -44,7 +42,7 @@ def transform_data(data:  dict, root_doi: str) -> tuple:
                 "family": family
             })
             paper_authors.append({
-                "paper_doi": root_doi,
+                "paper_doi": doi,
                 "given": given,
                 "family": family,
                 "sequence": sequence
@@ -65,7 +63,14 @@ def transform_data(data:  dict, root_doi: str) -> tuple:
             "score": None,
             "published": None
         })
-        citations.append((root_doi, cited))
+        citations.append((doi, cited))
+    return (papers, citations, authors, paper_authors)
+
+
+def transform_opencitations_data(doi: str) -> tuple:
+    opencitations = fetch_opencitations(doi)
+    papers = []
+    citations = []
 
     for c in opencitations:
         citing_raw = c.get("citing")
@@ -82,6 +87,6 @@ def transform_data(data:  dict, root_doi: str) -> tuple:
             "score": None,
             "published": None
         })
-        citations.append((citing, root_doi))
+        citations.append((citing, doi))
 
-    return (papers, citations, authors, paper_authors)
+    return (papers, citations)

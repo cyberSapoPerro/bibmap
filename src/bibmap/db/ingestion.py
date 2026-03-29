@@ -2,10 +2,9 @@ import sqlite3
 
 from tqdm import tqdm
 
+from bibmap.db.queries import fetch_imcomplete_papers
 from bibmap.utils import normalize_doi
-from bibmap.api.connections import fetch_paper_data
-from bibmap.api.data_transformation import transform_data
-
+from bibmap.api.data_transformation import transform_crossref_data, transform_opencitations_data
 
 
 def upsert_papers(conn: sqlite3.Connection, papers: list) -> None:
@@ -72,10 +71,11 @@ def upsert_paper_authors(conn: sqlite3.Connection, paper_authors: list) -> None:
     )
 
 
-def ingest_paper_by_doi(conn: sqlite3.Connection, doi: str) -> None:
+def ingest_paper_by_doi_with_crossref_data(
+    conn: sqlite3.Connection, doi:str
+) -> None:
     doi = normalize_doi(doi)
-    data = fetch_paper_data(doi)
-    papers, citations, authors, paper_authors = transform_data(data, doi)
+    papers, citations, authors, paper_authors = transform_crossref_data(doi)
 
     with conn:
         upsert_papers(conn, papers)
@@ -84,17 +84,32 @@ def ingest_paper_by_doi(conn: sqlite3.Connection, doi: str) -> None:
         upsert_paper_authors(conn, paper_authors)
 
 
-def enrich_incomplete_papers(conn: sqlite3.Connection, limit: int) -> None:
-    cur = conn.execute(
-        """
-        SELECT doi FROM papers WHERE title IS NULL LIMIT ?
-        """,
-        (limit,)
-    )
-    dois = [row[0] for row in cur.fetchall()]
+def ingest_paper_by_doi_with_opencitations_data(
+    conn: sqlite3.Connection, doi:str
+) -> None:
+    doi = normalize_doi(doi)
+    papers, citations = transform_opencitations_data(doi)
+
+    with conn:
+        upsert_papers(conn, papers)
+        upsert_citations(conn, citations)
+
+
+def enrich_papers_with_metadata(conn: sqlite3.Connection, limit:int = 10000) -> None:
+    dois = fetch_imcomplete_papers(conn, limit)
+
+    total = len(dois)
+    print(f"Completing {total} incomplete papers (limit={limit})...")
+    for doi in tqdm(dois, desc="Fetching metadata"):
+        ingest_paper_by_doi_with_crossref_data(conn, doi)
+
+
+def enrich__papers_with_metadata_and_citations(conn: sqlite3.Connection, limit: int = 10000) -> None:
+    dois = fetch_imcomplete_papers(conn, limit)
 
     total = len(dois)
     print(f"Enriching {total} incomplete papers (limit={limit})...")
 
     for doi in tqdm(dois, desc="Fetching metadata"):
-        ingest_paper_by_doi(conn, doi)
+        ingest_paper_by_doi_with_crossref_data(conn, doi)
+        ingest_paper_by_doi_with_opencitations_data(conn, doi)

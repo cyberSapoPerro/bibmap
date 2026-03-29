@@ -1,11 +1,23 @@
 import sqlite3
 
+from typing import Optional, Tuple
 
-def fetch_paper_dois(conn: sqlite3.Connection) -> list:
+
+def fetch_paper_by_doi(conn: sqlite3.Connection, doi: str) -> Optional[Tuple]:
     cur = conn.execute(
         """
-        select doi from papers limit 5000;
+        SELECT * FROM papers WHERE doi = ?;
+        """,
+        (doi,)
+    )
+    return cur.fetchone()
+
+def fetch_paper_dois(conn: sqlite3.Connection, limit:int = 1000) -> list:
+    cur = conn.execute(
         """
+        select doi from papers limit ?;
+        """,
+        (limit,)
     )
     dois = [row[0] for row in cur.fetchall()]
     return dois
@@ -29,3 +41,15 @@ def collect_nodes_from_edges(edges: list) -> list:
         nodes.add(cited)
     return list(nodes)       
 
+def fetch_imcomplete_papers(
+    conn: sqlite3.Connection,
+    limit: int = 10000
+) -> list:
+    cur = conn.execute(
+        """
+        SELECT doi FROM papers WHERE title IS NULL LIMIT ?
+        """,
+        (limit,)
+    )
+    dois = [row[0] for row in cur.fetchall()]
+    return dois
