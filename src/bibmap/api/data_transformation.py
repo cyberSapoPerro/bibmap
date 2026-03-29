@@ -1,4 +1,14 @@
+from datetime import datetime
+
 from utils import normalize_doi
+
+
+def extract_date(obj):
+    if not obj:
+        return None
+    parts = obj.get("date-parts")
+    y, m, d = (parts [0] + [1, 1, 1])[:3]
+    return datetime(y, m, d).date()
 
 
 def transform_data(data:  dict, root_doi: str) -> tuple:
@@ -7,8 +17,8 @@ def transform_data(data:  dict, root_doi: str) -> tuple:
     authors = []
     paper_authors = []
 
-    root_doi = normalize_doi(root_doi)
     crossref = data.get("crossref", {})
+    root_doi = normalize_doi(root_doi)
     opencitations = data.get("opencitations", {})
 
     papers.append({
@@ -19,6 +29,7 @@ def transform_data(data:  dict, root_doi: str) -> tuple:
         "container_title": (crossref.get("container-title") or [None])[0],
         "is_referenced_by_count": crossref.get("is-referenced-by-count"),
         "score": crossref.get("score"),
+        "published": extract_date(crossref.get("published"))
     })
 
     if crossref.get("author"):
@@ -52,6 +63,7 @@ def transform_data(data:  dict, root_doi: str) -> tuple:
             "container_title": None,
             "is_referenced_by_count": None,
             "score": None,
+            "published": None
         })
         citations.append((root_doi, cited))
 
@@ -68,6 +80,7 @@ def transform_data(data:  dict, root_doi: str) -> tuple:
             "container_title": None,
             "is_referenced_by_count": None,
             "score": None,
+            "published": None
         })
         citations.append((citing, root_doi))
 

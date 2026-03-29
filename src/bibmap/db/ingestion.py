@@ -13,9 +13,9 @@ def upsert_papers(conn: sqlite3.Connection, papers: list) -> None:
         """
         INSERT INTO papers (
             doi, title, reference_count, publisher,
-            container_title, is_referenced_by_count, score
+            container_title, is_referenced_by_count, score, published
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(doi) DO 
             UPDATE SET
             title = COALESCE(excluded.title, papers.title),
@@ -23,16 +23,18 @@ def upsert_papers(conn: sqlite3.Connection, papers: list) -> None:
             publisher = COALESCE(excluded.publisher, papers.publisher),
             container_title = COALESCE(excluded.container_title, papers.container_title),
             is_referenced_by_count = COALESCE(excluded.is_referenced_by_count, papers.is_referenced_by_count),
-            score = COALESCE(excluded.score, papers.score)
+            score = COALESCE(excluded.score, papers.score),
+            published = COALESCE(excluded.published, papers.published)
         """, 
         [(
-            p["doi"],
-            p["title"],
-            p["reference_count"],
-            p["publisher"],
-            p["container_title"],
-            p["is_referenced_by_count"],
-            p["score"],
+            p.get("doi"),
+            p.get("title"),
+            p.get("reference_count"),
+            p.get("publisher"),
+            p.get("container_title"),
+            p.get("is_referenced_by_count"),
+            p.get("score"),
+            p.get("published"),
         ) for p in papers]
     )
 
@@ -62,11 +64,11 @@ def upsert_paper_authors(conn: sqlite3.Connection, paper_authors: list) -> None:
         VALUES (?, ?, ?, ?)
         """, 
         [(
-            i["paper_doi"],
-            i["given"],
-            i["family"],
-            i["sequence"]
-        ) for i in paper_authors ]
+            i.get("paper_doi"),
+            i.get("given"),
+            i.get("family"),
+            i.get("sequence")
+        ) for i in paper_authors]
     )
 
 

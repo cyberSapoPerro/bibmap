@@ -1,11 +1,12 @@
 CREATE TABLE papers (
-  doi TEXT PRIMARY KEY,
+  doi TEXT PRIMARY KEY NOT NULL,
   title TEXT,
   publisher TEXT,
   container_title TEXT,
   reference_count INTEGER,
   is_referenced_by_count INTEGER,
-  score INTEGER
+  score INTEGER,
+  published TEXT CHECK (published GLOB '????-??-??')
 );
 
 CREATE TABLE citations (
@@ -24,9 +25,9 @@ CREATE TABLE authors (
 );
 
 CREATE TABLE paper_author (
-  paper_doi TEXT,
-  author_given TEXT,
-  author_family TEXT,
+  paper_doi TEXT NOT NULL,
+  author_given TEXT NOT NULL,
+  author_family TEXT NOT NULL,
   sequence TEXT,
   PRIMARY KEY (paper_doi, author_given, author_family),
   FOREIGN KEY (paper_doi) REFERENCES papers(doi) ON DELETE CASCADE,
@@ -38,3 +39,5 @@ CREATE TABLE paper_author (
 CREATE INDEX idx_citing ON citations(citing_doi);
 CREATE INDEX idx_cited ON citations(cited_doi);
 CREATE INDEX idx_pa_paper ON paper_author(paper_doi);
+CREATE INDEX idx_pa_author ON paper_author(author_given, author_family);
+CREATE INDEX idx_citations_pair ON citations(citing_doi, cited_doi);
