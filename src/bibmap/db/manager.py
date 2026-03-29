@@ -4,7 +4,7 @@ import sqlite3
 
 
 def set_db_connection() -> sqlite3.Connection:
-    base_dir = Path.home() / ".local" / "share" / "bibman"
+    base_dir = Path.home() / ".local" / "share" / "bibmap"
     db_path = base_dir / "db.sqlite"
 
     base_dir.mkdir(parents=True, exist_ok=True)
