@@ -4,15 +4,14 @@ import requests
 from bibmap.utils import normalize_doi
 
 def fetch_opencitations(doi: str) -> dict:
+    doi = normalize_doi(doi)
     url = f"https://opencitations.net/index/coci/api/v1/citations/{doi}"
-    response = requests.get(url)
-    response.raise_for_status()
 
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
         data = response.json()
-        return data.get("message", {})
+        return data
 
     except requests.exceptions.HTTPError as e:
         print(f"[Opencitations HTTP error] DOI={doi} | {e}")
@@ -29,6 +28,7 @@ def fetch_opencitations(doi: str) -> dict:
     
 
 def fetch_crossref(doi: str) -> dict:
+    doi = normalize_doi(doi)
     url = f"https://api.crossref.org/works/{doi}"
 
     try:
