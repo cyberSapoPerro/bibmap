@@ -1,13 +1,13 @@
 [project]
 name = "bibmap"
 version = "0.1.0"
-description = "Visiaulize bibliometric maps"
+description = "Visualize bibliometric maps"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
   "requests",
   "pyvis",
-  "tqdl",
+  "tqdm",
   "networkx",
   "numpy",
   "scipy",
@@ -17,5 +17,11 @@ dependencies = [
 [project.scripts]
 bibmap = "bibmap.cli:main"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+bibmap = ["db/schema.sql"]

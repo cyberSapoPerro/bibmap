@@ -3,7 +3,7 @@ from importlib import resources
 import sqlite3
 
 
-def get_db_connection() -> sqlite3.Connection:
+def set_db_connection() -> sqlite3.Connection:
     base_dir = Path.home() / ".local" / "share" / "bibman"
     db_path = base_dir / "db.sqlite"
 

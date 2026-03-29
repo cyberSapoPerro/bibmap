@@ -2,9 +2,9 @@ import sqlite3
 
 from tqdm import tqdm
 
-from utils import normalize_doi
-from api.connections import fetch_paper_data
-from api.data_transformation import transform_data
+from bibmap.utils import normalize_doi
+from bibmap.api.connections import fetch_paper_data
+from bibmap.api.data_transformation import transform_data
 
 
 

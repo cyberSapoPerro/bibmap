@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from utils import normalize_doi
+from bibmap.utils import normalize_doi
 
 
 def extract_date(obj):

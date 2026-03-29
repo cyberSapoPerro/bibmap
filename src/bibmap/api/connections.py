@@ -1,7 +1,7 @@
 import requests
 
 
-from utils import normalize_doi
+from bibmap.utils import normalize_doi
 
 def fetch_opencitations(doi: str) -> dict:
     url = f"https://opencitations.net/index/coci/api/v1/citations/{doi}"
