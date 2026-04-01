@@ -22,7 +22,7 @@ dependencies = [
     { name = "pyvis" },
     { name = "requests" },
     { name = "scipy" },
-    { name = "tqdl" },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
@@ -33,7 +33,7 @@ requires-dist = [
     { name = "pyvis" },
     { name = "requests" },
     { name = "scipy" },
-    { name = "tqdl" },
+    { name = "tqdm" },
 ]
 
 [[package]]
@@ -787,19 +787,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/28/e3/55dcc2cfbc3ca9c29519eb6884dd1415ecb53b0e934862d3559ddcb7e20b/stack_data-0.6.3.tar.gz", hash = "sha256:836a778de4fec4dcd1dcd89ed8abff8a221f58308462e1c4aa2a3cf30148f0b9", size = 44707, upload-time = "2023-09-30T13:58:05.479Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f1/7b/ce1eafaf1a76852e2ec9b22edecf1daa58175c090266e9f6c64afcd81d91/stack_data-0.6.3-py3-none-any.whl", hash = "sha256:d5558e0c25a4cb0853cddad3d77da9891a08cb85dd9f9f91b9f8cd66e511e695", size = 24521, upload-time = "2023-09-30T13:58:03.53Z" },
-]
-
-[[package]]
-name = "tqdl"
-version = "0.0.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-    { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/e6/7c7b02481932aaa579fb33b8f567b5735b9a1d1b8ba3895d5cbad6faeafc/tqdl-0.0.4.tar.gz", hash = "sha256:60d95cf53e9f3d9617d0d5b54585d6bd6d79ff9dfcfc10965d351b06e7617931", size = 20136, upload-time = "2019-10-27T14:24:10.977Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/72/75ef3450112c6f82ee80e58a1c7eafac2e355790f81c941f2ea9a775951b/tqdl-0.0.4-py3-none-any.whl", hash = "sha256:a385e300a0a02903b266c1b737486c9580cedafa6de9a0d686cb02de43a2e0a4", size = 4730, upload-time = "2019-10-27T14:24:09.149Z" },
 ]
 
 [[package]]

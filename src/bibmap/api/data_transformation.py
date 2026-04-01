@@ -4,7 +4,21 @@ from bibmap.api.connections import fetch_crossref, fetch_opencitations
 from bibmap.utils import normalize_doi
 
 
-def transform_crossref_data(doi: str) -> tuple:
+def transform_crossref_data(
+    doi: str,
+) -> tuple[list[dict], list[tuple[str, str]], list[dict], list[dict]]:
+    """Transform Crossref API data into database-ready format.
+
+    Args:
+        doi: The DOI to transform data for.
+
+    Returns:
+        A tuple of (papers, citations, authors, paper_authors):
+            - papers: List of paper dictionaries.
+            - citations: List of (citing_doi, cited_doi) tuples.
+            - authors: List of author dictionaries.
+            - paper_authors: List of paper-author relationship dictionaries.
+    """
     papers = []
     citations = []
     authors = []
@@ -16,19 +30,21 @@ def transform_crossref_data(doi: str) -> tuple:
         if not obj:
             return None
         parts = obj.get("date-parts")
-        y, m, d = (parts [0] + [1, 1, 1])[:3]
+        y, m, d = (parts[0] + [1, 1, 1])[:3]
         return datetime(y, m, d).date()
 
-    papers.append({
-        "doi": doi,
-        "title": crossref.get("title", [""])[0],
-        "reference_count": crossref.get("reference-count"),
-        "publisher": crossref.get("publisher"),
-        "container_title": (crossref.get("container-title") or [None])[0],
-        "is_referenced_by_count": crossref.get("is-referenced-by-count"),
-        "score": crossref.get("score"),
-        "published": extract_date(crossref.get("published"))
-    })
+    papers.append(
+        {
+            "doi": doi,
+            "title": crossref.get("title", [""])[0],
+            "reference_count": crossref.get("reference-count"),
+            "publisher": crossref.get("publisher"),
+            "container_title": (crossref.get("container-title") or [None])[0],
+            "is_referenced_by_count": crossref.get("is-referenced-by-count"),
+            "score": crossref.get("score"),
+            "published": extract_date(crossref.get("published")),
+        }
+    )
 
     if crossref.get("author"):
         for a in crossref.get("author"):
@@ -37,37 +53,48 @@ def transform_crossref_data(doi: str) -> tuple:
             sequence = a.get("sequence")
             if not given or not family:
                 continue
-            authors.append({
-                "given": given,
-                "family": family
-            })
-            paper_authors.append({
-                "paper_doi": doi,
-                "given": given,
-                "family": family,
-                "sequence": sequence
-            })
+            authors.append({"given": given, "family": family})
+            paper_authors.append(
+                {
+                    "paper_doi": doi,
+                    "given": given,
+                    "family": family,
+                    "sequence": sequence,
+                }
+            )
 
     for ref in crossref.get("reference", []):
         cited_raw = ref.get("DOI")
         if not cited_raw:
             continue
         cited = normalize_doi(cited_raw)
-        papers.append({
-            "doi": cited,
-            "title": None,
-            "reference_count": None,
-            "publisher": None,
-            "container_title": None,
-            "is_referenced_by_count": None,
-            "score": None,
-            "published": None
-        })
+        papers.append(
+            {
+                "doi": cited,
+                "title": None,
+                "reference_count": None,
+                "publisher": None,
+                "container_title": None,
+                "is_referenced_by_count": None,
+                "score": None,
+                "published": None,
+            }
+        )
         citations.append((doi, cited))
     return (papers, citations, authors, paper_authors)
 
 
-def transform_opencitations_data(doi: str) -> tuple:
+def transform_opencitations_data(doi: str) -> tuple[list[dict], list[tuple[str, str]]]:
+    """Transform OpenCitations API data into database-ready format.
+
+    Args:
+        doi: The DOI to transform citations for.
+
+    Returns:
+        A tuple of (papers, citations):
+            - papers: List of paper dictionaries.
+            - citations: List of (citing_doi, cited_doi) tuples.
+    """
     opencitations = fetch_opencitations(doi)
     papers = []
     citations = []
@@ -77,16 +104,18 @@ def transform_opencitations_data(doi: str) -> tuple:
         if not citing_raw:
             continue
         citing = normalize_doi(citing_raw)
-        papers.append({
-            "doi": citing,
-            "title": None,
-            "reference_count": None,
-            "publisher": None,
-            "container_title": None,
-            "is_referenced_by_count": None,
-            "score": None,
-            "published": None
-        })
+        papers.append(
+            {
+                "doi": citing,
+                "title": None,
+                "reference_count": None,
+                "publisher": None,
+                "container_title": None,
+                "is_referenced_by_count": None,
+                "score": None,
+                "published": None,
+            }
+        )
         citations.append((citing, doi))
 
     return (papers, citations)

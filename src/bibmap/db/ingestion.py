@@ -2,7 +2,7 @@ import sqlite3
 
 from tqdm import tqdm
 
-from bibmap.db.queries import fetch_imcomplete_papers
+from bibmap.db.queries import fetch_incomplete_papers
 from bibmap.utils import normalize_doi
 from bibmap.api.data_transformation import (
     transform_crossref_data,
@@ -10,7 +10,15 @@ from bibmap.api.data_transformation import (
 )
 
 
-def upsert_papers(conn: sqlite3.Connection, papers: list) -> None:
+def upsert_papers(conn: sqlite3.Connection, papers: list[dict]) -> None:
+    """Insert or update papers in the database.
+
+    Args:
+        conn: SQLite database connection.
+        papers: List of paper dictionaries with keys: doi, title,
+            reference_count, publisher, container_title,
+            is_referenced_by_count, score, published.
+    """
     conn.executemany(
         """
         INSERT INTO papers (
@@ -44,7 +52,15 @@ def upsert_papers(conn: sqlite3.Connection, papers: list) -> None:
     )
 
 
-def upsert_citations(conn: sqlite3.Connection, citations: list) -> None:
+def upsert_citations(
+    conn: sqlite3.Connection, citations: list[tuple[str, str]]
+) -> None:
+    """Insert citation relationships into the database.
+
+    Args:
+        conn: SQLite database connection.
+        citations: List of tuples containing (citing_doi, cited_doi).
+    """
     conn.executemany(
         """
         INSERT OR IGNORE INTO citations (citing_doi, cited_doi)
@@ -54,7 +70,13 @@ def upsert_citations(conn: sqlite3.Connection, citations: list) -> None:
     )
 
 
-def upsert_authors(conn: sqlite3.Connection, authors: list) -> None:
+def upsert_authors(conn: sqlite3.Connection, authors: list[dict]) -> None:
+    """Insert authors into the database.
+
+    Args:
+        conn: SQLite database connection.
+        authors: List of author dictionaries with keys: given, family.
+    """
     conn.executemany(
         """
         INSERT OR IGNORE INTO authors (given, family) VALUES (?, ?);
@@ -63,7 +85,14 @@ def upsert_authors(conn: sqlite3.Connection, authors: list) -> None:
     )
 
 
-def upsert_paper_authors(conn: sqlite3.Connection, paper_authors: list) -> None:
+def upsert_paper_authors(conn: sqlite3.Connection, paper_authors: list[dict]) -> None:
+    """Insert paper-author relationships into the database.
+
+    Args:
+        conn: SQLite database connection.
+        paper_authors: List of dictionaries with keys: paper_doi,
+            given, family, sequence.
+    """
     conn.executemany(
         """
         INSERT OR IGNORE INTO paper_author (
@@ -72,18 +101,19 @@ def upsert_paper_authors(conn: sqlite3.Connection, paper_authors: list) -> None:
         VALUES (?, ?, ?, ?)
         """,
         [
-            (
-                i.get("paper_doi"),
-                i.get("given"),
-                i.get("family"),
-                i.get("sequence")
-            )
+            (i.get("paper_doi"), i.get("given"), i.get("family"), i.get("sequence"))
             for i in paper_authors
         ],
     )
 
 
 def ingest_data_by_doi_from_crossref(conn: sqlite3.Connection, doi: str) -> None:
+    """Ingest paper metadata from Crossref for a given DOI.
+
+    Args:
+        conn: SQLite database connection.
+        doi: The DOI of the paper to ingest.
+    """
     doi = normalize_doi(doi)
     papers, citations, authors, paper_authors = transform_crossref_data(doi)
 
@@ -95,6 +125,12 @@ def ingest_data_by_doi_from_crossref(conn: sqlite3.Connection, doi: str) -> None
 
 
 def ingest_data_by_doi_from_opencitations(conn: sqlite3.Connection, doi: str) -> None:
+    """Ingest citation data from OpenCitations for a given DOI.
+
+    Args:
+        conn: SQLite database connection.
+        doi: The DOI of the paper to ingest citations for.
+    """
     doi = normalize_doi(doi)
     papers, citations = transform_opencitations_data(doi)
 
@@ -115,12 +151,26 @@ def ingest_data_by_doi_from_opencitations(conn: sqlite3.Connection, doi: str) ->
 
 
 def populate_database_from_one_doi(conn: sqlite3.Connection, doi: str) -> None:
+    """Populate the database with all available data for a single DOI.
+
+    Combines data from both Crossref and OpenCitations.
+
+    Args:
+        conn: SQLite database connection.
+        doi: The DOI of the paper to populate.
+    """
     ingest_data_by_doi_from_crossref(conn, doi)
     ingest_data_by_doi_from_opencitations(conn, doi)
 
 
 def enrich_papers_with_metadata(conn: sqlite3.Connection, limit: int = 10000) -> None:
-    dois = fetch_imcomplete_papers(conn, limit)
+    """Enrich incomplete papers with metadata from Crossref.
+
+    Args:
+        conn: SQLite database connection.
+        limit: Maximum number of papers to enrich.
+    """
+    dois = fetch_incomplete_papers(conn, limit)
 
     total = len(dois)
     print(f"Completing {total} incomplete papers with metadata (limit={limit})...")
@@ -128,11 +178,21 @@ def enrich_papers_with_metadata(conn: sqlite3.Connection, limit: int = 10000) ->
         ingest_data_by_doi_from_crossref(conn, doi)
 
 
-def enrich_papers_with_metadata_and_citations(conn: sqlite3.Connection, limit: int = 10000) -> None:
-    dois = fetch_imcomplete_papers(conn, limit)
+def enrich_papers_with_metadata_and_citations(
+    conn: sqlite3.Connection, limit: int = 10000
+) -> None:
+    """Enrich incomplete papers with both metadata and citations.
+
+    Args:
+        conn: SQLite database connection.
+        limit: Maximum number of papers to enrich.
+    """
+    dois = fetch_incomplete_papers(conn, limit)
 
     total = len(dois)
-    print(f"Enriching {total} incomplete papers with metadata and citations (limit={limit})...")
+    print(
+        f"Enriching {total} incomplete papers with metadata and citations (limit={limit})..."
+    )
 
     for doi in tqdm(dois, desc="Fetching metadata"):
         ingest_data_by_doi_from_crossref(conn, doi)

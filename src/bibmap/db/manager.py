@@ -4,6 +4,14 @@ import sqlite3
 
 
 def set_db_connection() -> sqlite3.Connection:
+    """Create and return a database connection.
+
+    Initializes the database if it doesn't exist, creating the schema
+    from the bundled SQL file.
+
+    Returns:
+        A SQLite connection with foreign keys enabled.
+    """
     base_dir = Path.home() / ".local" / "share" / "bibmap"
     db_path = base_dir / "db.sqlite"
 
@@ -14,9 +22,11 @@ def set_db_connection() -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON")
 
     if not db_exists:
-        schema_sql = resources.files("bibmap.db") \
-            .joinpath("schema.sql") \
+        schema_sql = (
+            resources.files("bibmap.db")
+            .joinpath("schema.sql")
             .read_text(encoding="utf-8")
+        )
 
         conn.executescript(schema_sql)
 
