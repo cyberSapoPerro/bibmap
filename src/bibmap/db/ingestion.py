@@ -2,11 +2,14 @@ import sqlite3
 
 from tqdm import tqdm
 
-from bibmap.db.queries import fetch_incomplete_papers
 from bibmap.utils import normalize_doi
 from bibmap.api.data_transformation import (
     transform_crossref_data,
     transform_opencitations_data,
+)
+from bibmap.db.queries import (
+    fetch_incomplete_papers,
+    fetch_dois_if_not_metadata,
 )
 
 
@@ -163,8 +166,10 @@ def populate_database_from_one_doi(conn: sqlite3.Connection, doi: str) -> None:
     ingest_data_by_doi_from_opencitations(conn, doi)
 
 
-def enrich_papers_with_metadata(conn: sqlite3.Connection, limit: int = 10000) -> None:
-    """Enrich incomplete papers with metadata from Crossref.
+def enrich_random_papers_with_metadata(
+    conn: sqlite3.Connection, limit: int = 10000
+) -> None:
+    """Enrich random incomplete papers with metadata from Crossref.
 
     Args:
         conn: SQLite database connection.
@@ -178,10 +183,10 @@ def enrich_papers_with_metadata(conn: sqlite3.Connection, limit: int = 10000) ->
         ingest_data_by_doi_from_crossref(conn, doi)
 
 
-def enrich_papers_with_metadata_and_citations(
+def enrich_random_papers_with_metadata_and_citations(
     conn: sqlite3.Connection, limit: int = 10000
 ) -> None:
-    """Enrich incomplete papers with both metadata and citations.
+    """Enrich random incomplete papers with both metadata and citations.
 
     Args:
         conn: SQLite database connection.
@@ -197,3 +202,28 @@ def enrich_papers_with_metadata_and_citations(
     for doi in tqdm(dois, desc="Fetching metadata"):
         ingest_data_by_doi_from_crossref(conn, doi)
         ingest_data_by_doi_from_opencitations(conn, doi)
+
+
+def enrich_specific_papers_with_metadata(conn: sqlite3.Connection, dois: set) -> None:
+    """Enrich a list of incomplete papers with metadata from Crossref.
+
+    Args:
+        conn: SQLite database connection.
+        dois: Set of dois to be enriched.
+    """
+
+    total = len(dois)
+    print(f"Completing {total} incomplete papers with metadata...")
+    for doi in tqdm(dois, desc="Fetching metadata"):
+        ingest_data_by_doi_from_crossref(conn, doi)
+
+
+def enrich_graph_dois(conn: sqlite3.Connection, dois: list[str]) -> None:
+    """Enrich papers in a graph with Crossref metadata
+
+    Args:
+        conn: SQLite database connection.
+        dois: DOIs in the graph.
+    """
+    dois_with_not_metadata = fetch_dois_if_not_metadata(conn, dois)
+    enrich_specific_papers_with_metadata(conn, dois_with_not_metadata)

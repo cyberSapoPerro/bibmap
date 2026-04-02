@@ -1,6 +1,6 @@
 import sqlite3
 
-from typing import Optional
+from typing import Optional, Set, List
 
 
 def fetch_paper_by_doi(conn: sqlite3.Connection, doi: str) -> Optional[tuple]:
@@ -122,3 +122,90 @@ def fetch_cited_and_citing_dois(conn: sqlite3.Connection, root_doi: str) -> set[
         dois.add(citing)
         dois.add(cited)
     return dois
+
+
+def fetch_dois_if_not_metadata(
+    conn: sqlite3.Connection,
+    dois: List[str],
+) -> Set[str]:
+    """Return DOIs whose metadata is missing (i.e., title is NULL).
+
+    Args:
+        conn: SQLite database connection.
+        dois: Iterable of DOIs to check.
+
+    Returns:
+        Set of DOIs with no metadata.
+    """
+
+    placeholders = ",".join("?" for _ in dois)
+
+    query = f"""
+        SELECT doi
+        FROM papers
+        WHERE doi IN ({placeholders})
+        AND title IS NULL
+        ;
+    """
+
+    cur = conn.execute(query, dois)
+    rows = cur.fetchall()
+
+    return {doi for (doi,) in rows}
+
+
+def fetch_citation_graph_data(
+    conn: sqlite3.Connection,
+    root_doi: str,
+    depth: int = 1,
+) -> tuple[list[str], list[tuple[str, str]]]:
+    """Fetch citation graph data starting from a root DOI.
+
+    Performs a breadth-first search to retrieve all connected papers
+    (papers that cite or are cited by the root DOI, recursively).
+
+    Args:
+        conn: SQLite database connection.
+        root_doi: The starting DOI for the graph traversal.
+        depth: Maximum depth for BFS traversal. Defaults to 1.
+
+    Returns:
+        A tuple of (nodes, edges):
+            - nodes: List of unique DOIs in the graph.
+            - edges: List of (citing_doi, cited_doi) tuples.
+    """
+    all_nodes: list[str] = [root_doi]
+    all_edges: list[tuple[str, str]] = []
+
+    current_level = [root_doi]
+
+    for _ in range(depth):
+        if not current_level:
+            break
+
+        new_dois: set[str] = set()
+        new_edges: list[tuple[str, str]] = []
+
+        for doi in current_level:
+            edges = fetch_citation_edges_for_nodes(conn, [doi])
+            for citing, cited in edges:
+                new_edges.append((citing, cited))
+                if citing != doi:
+                    new_dois.add(citing)
+                if cited != doi:
+                    new_dois.add(cited)
+
+        if not new_dois:
+            break
+
+        all_edges.extend(new_edges)
+
+        for citing, cited in new_edges:
+            if citing not in all_nodes:
+                all_nodes.append(citing)
+            if cited not in all_nodes:
+                all_nodes.append(cited)
+
+        current_level = list(new_dois)
+
+    return all_nodes, all_edges
